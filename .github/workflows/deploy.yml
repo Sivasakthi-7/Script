@@ -1,0 +1,46 @@
+name: Sync Notion and Deploy to GitHub Pages
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Every hour
+  workflow_dispatch:      # Manual trigger
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  sync-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: true # Important if your theme is a submodule
+
+      # 1. FETCH FROM NOTION
+      - name: Sync Notion to Markdown
+        uses: varkor/notion-hugo@master
+        with:
+          notion_token: ${{ secrets.NOTION_TOKEN }}
+          database_id: ${{ secrets.NOTION_DATABASE_ID }}
+          output_dir: 'content/posts'
+
+      # 2. SETUP HUGO
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: 'latest'
+          extended: true
+
+      # 3. BUILD SITE
+      - name: Build
+        run: hugo --minify
+
+      # 4. DEPLOY TO GITHUB PAGES
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
